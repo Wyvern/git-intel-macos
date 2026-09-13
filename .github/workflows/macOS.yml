@@ -11,7 +11,7 @@ env:
 
 jobs:
   macOS:
-    name: macOS-26
+    name: Git-macOS-Intel
     runs-on: macos-26
 
     permissions:
@@ -98,9 +98,30 @@ jobs:
         working-directory: git_osx_installer
         env:
           MACOSX_DEPLOYMENT_TARGET: '11.0'
-          CFLAGS: '-target x86_64-apple-macos11'
-          CXXFLAGS: '-target x86_64-apple-macos11'
-          LDFLAGS: '-target x86_64-apple-macos11'
+          CFLAGS: >-
+                      -target x86_64-apple-macos11
+                      -O3
+                      -flto=thin
+                      -fno-ident
+                      -ffunction-sections
+                      -fdata-sections
+                      -march=haswell
+                      -pipe
+          CXXFLAGS: >-
+                      -target x86_64-apple-macos11
+                      -O3
+                      -flto=thin
+                      -ffunction-sections
+                      -fdata-sections
+                      -fno-ident
+                      -march=haswell
+                      -pipe
+          LDFLAGS: >-
+                      -target x86_64-apple-macos11
+                      -flto=thin
+                      -march=haswell
+                      -Wl,-dead_strip
+                      -Wl,-dead_strip_dylibs
         run: |
           set -euxo pipefail
 
