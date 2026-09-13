@@ -161,13 +161,10 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
           echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
 
-          echo
-          echo "Rust target:"
-          rustc --print target-libdir --target x86_64-apple-darwin
-
-          echo
-          echo "Cargo target:"
-          cargo --version
+          grep -RIn \
+                      --exclude-dir=.git \
+                      -E 'cargo[[:space:]]+(build|rustc)|libgitcore\.a' \
+                      . || true
 
       - name: Build Release
         working-directory: git_osx_installer
