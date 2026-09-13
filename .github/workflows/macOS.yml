@@ -104,9 +104,31 @@ jobs:
 
           for old, new in replacements.items():
               if old not in text:
-                  raise SystemExit(f"ERROR: Makefile pattern not found: {old!r}")
+                  raise SystemExit(
+                      f"ERROR: Makefile pattern not found: {old!r}"
+                  )
 
               text = text.replace(old, new)
+
+          # The upstream Makefile uses DESTDIR_arm everywhere.
+          # Rename all remaining references to the Intel staging directory.
+          text = text.replace(
+              "$(DESTDIR_arm)",
+              "$(DESTDIR_x86_64)",
+          )
+
+          # Remove the original upstream assignments.
+          # The optimized definitions above are multiline and therefore
+          # do not match these standalone lines.
+          text = text.replace(
+              "CFLAGS := $(ARCH_FLAGS)\n",
+              "",
+          )
+
+          text = text.replace(
+              "LDFLAGS := $(ARCH_FLAGS)\n",
+              "",
+          )
 
           path.write_text(text)
           PY
@@ -116,7 +138,7 @@ jobs:
           echo
 
           grep -nE \
-            'ARCH_FLAGS|^CFLAGS|^CXXFLAGS|^LDFLAGS|DESTDIR_|git-x86_64|staged-x86_64|compiled-x86_64|Mach-O' \
+            'ARCH_FLAGS|^CFLAGS|^CXXFLAGS|^LDFLAGS|DESTDIR_|^SUBMAKE|git-x86_64|staged-x86_64|compiled-x86_64|Mach-O' \
             Makefile
 
       - name: Build Release
