@@ -59,10 +59,41 @@ jobs:
 
           replacements = {
               "ARCH_FLAGS := -target arm64-apple-macos11":
-                  "ARCH_FLAGS := -target x86_64-apple-macos11",
+                  """ARCH_FLAGS := -target x86_64-apple-macos11
 
-              "DESTDIR_arm":
-                  "DESTDIR_x86_64",
+          CFLAGS := $(ARCH_FLAGS) \\
+              -O3 \\
+              -flto=thin \\
+              -ffunction-sections \\
+              -fdata-sections \\
+              -fno-ident \\
+              -march=haswell \\
+              -pipe
+
+          CXXFLAGS := $(ARCH_FLAGS) \\
+              -O3 \\
+              -flto=thin \\
+              -ffunction-sections \\
+              -fdata-sections \\
+              -fno-ident \\
+              -march=haswell \\
+              -pipe
+
+          LDFLAGS := $(ARCH_FLAGS) \\
+              -O3 \\
+              -flto=thin \\
+              -march=haswell \\
+              -Wl,-dead_strip \\
+              -Wl,-dead_strip_dylibs""",
+
+              "DESTDIR_arm := $(PWD)/stage-arm/":
+                  "DESTDIR_x86_64 := $(PWD)/stage-x86_64/",
+
+              "DESTDIR_x86_64 := $(PWD)/stage-arm/":
+                  "DESTDIR_x86_64 := $(PWD)/stage-x86_64/",
+
+              "SUBMAKE := $(SUBMAKE_base) DESTDIR=\"$(DESTDIR_x86_64)\" CFLAGS=\"$(CFLAGS)\" LDFLAGS=\"$(LDFLAGS)\"":
+                  "SUBMAKE := $(SUBMAKE_base) DESTDIR=\"$(DESTDIR_x86_64)\" CFLAGS=\"$(CFLAGS)\" CXXFLAGS=\"$(CXXFLAGS)\" LDFLAGS=\"$(LDFLAGS)\"",
 
               "git-arm":
                   "git-x86_64",
@@ -79,7 +110,7 @@ jobs:
 
           for old, new in replacements.items():
               if old not in text:
-                  print(f"WARNING: pattern not found: {old!r}")
+                  raise SystemExit(f"ERROR: Makefile pattern not found: {old!r}")
 
               text = text.replace(old, new)
 
@@ -91,37 +122,13 @@ jobs:
           echo
 
           grep -nE \
-            'ARCH_FLAGS|DESTDIR_|git-x86_64|staged-x86_64|compiled-x86_64|Mach-O' \
+            'ARCH_FLAGS|^CFLAGS|^CXXFLAGS|^LDFLAGS|DESTDIR_|git-x86_64|staged-x86_64|compiled-x86_64|Mach-O' \
             Makefile
 
       - name: Build Release
         working-directory: git_osx_installer
         env:
           MACOSX_DEPLOYMENT_TARGET: '11.0'
-          CFLAGS: >-
-                      -target x86_64-apple-macos11
-                      -O3
-                      -flto=thin
-                      -fno-ident
-                      -ffunction-sections
-                      -fdata-sections
-                      -march=haswell
-                      -pipe
-          CXXFLAGS: >-
-                      -target x86_64-apple-macos11
-                      -O3
-                      -flto=thin
-                      -ffunction-sections
-                      -fdata-sections
-                      -fno-ident
-                      -march=haswell
-                      -pipe
-          LDFLAGS: >-
-                      -target x86_64-apple-macos11
-                      -flto=thin
-                      -march=haswell
-                      -Wl,-dead_strip
-                      -Wl,-dead_strip_dylibs
         run: |
           set -euxo pipefail
 
