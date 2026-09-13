@@ -89,8 +89,8 @@ jobs:
               "DESTDIR_arm := $(PWD)/stage-arm/":
                   "DESTDIR_x86_64 := $(PWD)/stage-x86_64/",
 
-              "DESTDIR_x86_64 := $(PWD)/stage-arm/":
-                  "DESTDIR_x86_64 := $(PWD)/stage-x86_64/",
+              'SUBMAKE := $(SUBMAKE_base) DESTDIR="$(DESTDIR_x86_64)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"':
+                  'SUBMAKE := $(SUBMAKE_base) DESTDIR="$(DESTDIR_x86_64)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)"',
 
               "git-arm":
                   "git-x86_64",
