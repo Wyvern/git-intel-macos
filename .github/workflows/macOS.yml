@@ -150,6 +150,25 @@ jobs:
             'ARCH_FLAGS|^CFLAGS|^CXXFLAGS|^LDFLAGS|DESTDIR_|^SUBMAKE|git-x86_64|staged-x86_64|compiled-x86_64|Mach-O' \
             Makefile
 
+      - name: Configure Rust for Intel
+        working-directory: git_osx_installer
+        run: |
+          set -euxo pipefail
+
+          rustup target add x86_64-apple-darwin
+
+          echo "CARGO_BUILD_TARGET=x86_64-apple-darwin" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
+          echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
+
+          echo
+          echo "Rust target:"
+          rustc --print target-libdir --target x86_64-apple-darwin
+
+          echo
+          echo "Cargo target:"
+          cargo --version
+
       - name: Build Release
         working-directory: git_osx_installer
         env:
