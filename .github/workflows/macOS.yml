@@ -110,16 +110,14 @@ jobs:
 
               text = text.replace(old, new)
 
-          # The upstream Makefile uses DESTDIR_arm everywhere.
-          # Rename all remaining references to the Intel staging directory.
+          # Replace every remaining ARM staging-directory reference.
           text = text.replace(
               "$(DESTDIR_arm)",
               "$(DESTDIR_x86_64)",
           )
 
-          # Remove the original upstream assignments.
-          # The optimized definitions above are multiline and therefore
-          # do not match these standalone lines.
+          # Remove upstream standalone assignments that would override
+          # the optimized definitions above.
           text = text.replace(
               "CFLAGS := $(ARCH_FLAGS)\n",
               "",
@@ -129,6 +127,17 @@ jobs:
               "LDFLAGS := $(ARCH_FLAGS)\n",
               "",
           )
+
+          # Pass CXXFLAGS into the nested Git build too.
+          old = 'CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"'
+          new = 'CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)"'
+
+          if old not in text:
+              raise SystemExit(
+                  f"ERROR: SUBMAKE flags pattern not found: {old!r}"
+              )
+
+          text = text.replace(old, new)
 
           path.write_text(text)
           PY
