@@ -1,0 +1,184 @@
+name: Git
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macOS:
+    name: macOS-26
+    runs-on: macos-26
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Disable macos spotlight index
+        run: |
+          sudo mdutil -a -i off
+          sudo mdutil -a -d
+          sudo pmset -a powernap 0
+          sudo pmset -a sleep 0
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Checkout git_osx_installer
+        uses: actions/checkout@v4
+        with:
+          repository: MoravianUniversity/git_osx_installer
+          path: git_osx_installer
+          fetch-depth: 1
+
+      - name: Show build environment
+        working-directory: git_osx_installer
+        run: |
+          set -euxo pipefail
+
+          uname -a
+          uname -m
+          clang --version
+          make --version
+          xcode-select -p
+
+      - name: Patch for Intel x86_64
+        working-directory: git_osx_installer
+        run: |
+          set -euxo pipefail
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("Makefile")
+          text = path.read_text()
+
+          replacements = {
+              "ARCH_FLAGS := -target arm64-apple-macos11":
+                  "ARCH_FLAGS := -target x86_64-apple-macos11",
+
+              "DESTDIR_arm":
+                  "DESTDIR_x86_64",
+
+              "git-arm":
+                  "git-x86_64",
+
+              "osx-staged-arm":
+                  "osx-staged-x86_64",
+
+              "osx-compiled-arm":
+                  "osx-compiled-x86_64",
+
+              "Mach-O 64-bit executable arm64":
+                  "Mach-O 64-bit executable x86_64",
+          }
+
+          for old, new in replacements.items():
+              if old not in text:
+                  print(f"WARNING: pattern not found: {old!r}")
+
+              text = text.replace(old, new)
+
+          path.write_text(text)
+          PY
+
+          echo
+          echo "===== Patched Makefile ====="
+          echo
+
+          grep -nE \
+            'ARCH_FLAGS|DESTDIR_|git-x86_64|staged-x86_64|compiled-x86_64|Mach-O' \
+            Makefile
+
+      - name: Build Release
+        working-directory: git_osx_installer
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '11.0'
+          CFLAGS: '-target x86_64-apple-macos11'
+          CXXFLAGS: '-target x86_64-apple-macos11'
+          LDFLAGS: '-target x86_64-apple-macos11'
+        run: |
+          set -euxo pipefail
+
+          make clean || true
+
+          rm -rf \
+            build \
+            stage-x86_64 \
+            git-*.pkg
+
+          make package
+
+          echo
+          echo "===== Built packages ====="
+          echo
+
+          ls -lh git-*.pkg
+
+          sw_vers
+          hostinfo
+          sysctl -n machdep.cpu.brand_string
+
+      - name: Determine package
+        id: package
+        working-directory: git_osx_installer
+        run: |
+          set -euo pipefail
+
+          pkg="$(
+            find . \
+              -maxdepth 1 \
+              -name 'git-*.pkg' \
+              -type f \
+              -print \
+              -quit
+          )"
+
+          if [[ -z "$pkg" ]]; then
+            echo "ERROR: package not found"
+            exit 1
+          fi
+
+          pkg="${pkg#./}"
+
+          version="${pkg#git-}"
+          version="${version%.pkg}"
+
+          echo "file=$pkg" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          echo
+          echo "Package: $pkg"
+          echo "Git version: $version"
+
+      - name: Upload Git installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: git-macos-x86_64
+          path: git_osx_installer/git-*.pkg
+          if-no-files-found: error
+
+      - name: Upload package to GitHub Release
+        working-directory: git_osx_installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euxo pipefail
+
+          pkg="${{ steps.package.outputs.file }}"
+
+          echo
+          echo "Release tag: $RELEASE_TAG"
+          echo "Package:     $pkg"
+          echo
+
+          gh release upload \
+            "$RELEASE_TAG" \
+            "$pkg" \
+            --repo "${{ github.repository }}" \
+            --clobber
