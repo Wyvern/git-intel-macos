@@ -169,37 +169,61 @@ jobs:
 
           cd build/git-x86_64
 
-          echo "===== Rust host ====="
-          rustc --print host-tuple
+          python3 <<'PY'
+          from pathlib import Path
 
-          echo "===== Rust Intel target ====="
-          rustc --print target-libdir --target x86_64-apple-darwin
+          p = Path("Makefile")
+          s = p.read_text()
 
-          echo "===== Git 2.55 Rust configuration ====="
-          grep -nE '^(RUST|NO_RUST|CARGO)' Makefile || true
-          grep -nE 'libgitcore|RUST_LIB|CARGO' Makefile || true
+          old = """ifeq ($(uname_S),Windows)
+          RUST_LIB = $(RUST_TARGET_DIR)/gitcore.lib
+          else
+          RUST_LIB = $(RUST_TARGET_DIR)/libgitcore.a
+          endif
+          """
 
-          echo "===== Cargo ====="
-          cargo -vV
+          new = """ifeq ($(uname_S),Windows)
+          RUST_LIB = $(RUST_TARGET_DIR)/gitcore.lib
+          else
+          RUST_LIB = $(RUST_TARGET_DIR)/libgitcore.a
+          endif
 
-          echo "===== Direct Intel Rust build ====="
-          cargo build \
-            --release \
-            --lib \
-            --target x86_64-apple-darwin
+          RUST_TARGET = x86_64-apple-darwin
+          RUST_BUILD = $(notdir $(RUST_TARGET_DIR))
+          RUST_CARGO_LIB = target/$(RUST_TARGET)/$(RUST_BUILD)/libgitcore.a
+          """
 
-          echo "===== Rust output ====="
-          ls -lh target/x86_64-apple-darwin/release/libgitcore.a
+          if old not in s:
+              raise SystemExit("ERROR: RUST_LIB definition not found")
 
-          echo "===== Rust archive architecture ====="
-          file target/x86_64-apple-darwin/release/libgitcore.a
+          s = s.replace(old, new, 1)
+
+          old = """$(RUST_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
+          	$(QUIET_CARGO)cargo build $(CARGO_ARGS)
+          """
+
+          new = """$(RUST_CARGO_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
+          	$(QUIET_CARGO)cargo build $(CARGO_ARGS) --target $(RUST_TARGET)
+
+          $(RUST_LIB): $(RUST_CARGO_LIB)
+          	$(QUIET)mkdir -p $(dir $@)
+          	$(QUIET)cp $< $@
+          """
+
+          if old not in s:
+              raise SystemExit("ERROR: original RUST_LIB build rule not found")
+
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+          grep -n -A20 -B5 'RUST_CARGO_LIB' Makefile
 
       - name: Build installer
         working-directory: git_osx_installer
         run: |
           set -euxo pipefail
-
-          grep -n -A20 -B10 'RUST_LIB' build/git-x86_64/Makefile
 
           make package
 
