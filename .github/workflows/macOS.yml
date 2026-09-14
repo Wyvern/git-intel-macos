@@ -197,10 +197,17 @@ jobs:
 
           LIB="$BUILD_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
 
-          if ! cmp "$LIB" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
+          if test ! -f "$LIB"
           then
-              cp "$LIB" "$BUILD_DIR/libgitcore.a"
+              echo "error: Rust library not found: $LIB" >&2
+              exit 1
           fi
+
+          # Git's Makefile expects target/release/libgitcore.a.
+          cp "$LIB" "$BUILD_DIR/$BUILD_TYPE/$LIBNAME"
+
+          # Meson expects build/libgitcore.a.
+          cp "$LIB" "$BUILD_DIR/libgitcore.a"
           '''
 
           p.write_text(s)
