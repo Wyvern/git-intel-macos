@@ -182,15 +182,21 @@ jobs:
           s += r'''TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')}"
 
           echo "Cargo target: $TARGET"
-          echo "Build type: $BUILD_TYPE"
-          echo "Build directory: $BUILD_DIR"
           echo "Source directory: $SOURCE_DIR"
+          echo "Meson build directory: $BUILD_DIR"
+          echo "Build type: $BUILD_TYPE"
+
+          # Build Rust for Intel, but keep Cargo's target directory
+          # inside the Git source tree.
+          RUST_TARGET_DIR="$SOURCE_DIR/target"
+
+          rm -f "$RUST_TARGET_DIR/$BUILD_TYPE/$LIBNAME"
 
           cargo build \
               --lib \
               --quiet \
               --manifest-path="$SOURCE_DIR/Cargo.toml" \
-              --target-dir="$BUILD_DIR" \
+              --target-dir="$RUST_TARGET_DIR" \
               --target="$TARGET" \
               "$@"
 
@@ -200,39 +206,51 @@ jobs:
               exit $RET
           fi
 
-          LIB="$BUILD_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
+          RUST_LIB="$RUST_TARGET_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
+          GIT_LIB="$RUST_TARGET_DIR/$BUILD_TYPE/$LIBNAME"
 
-          if test ! -f "$LIB"
+          echo "Rust output:"
+          echo "  $RUST_LIB"
+
+          if test ! -f "$RUST_LIB"
           then
-              echo "error: Rust library not found: $LIB" >&2
-
-              echo "Rust build tree:" >&2
-              find "$BUILD_DIR" -type f -name "$LIBNAME" -print >&2
-
+              echo "error: Rust library not found: $RUST_LIB" >&2
+              find "$RUST_TARGET_DIR" -type f -name "$LIBNAME" -print >&2 || true
               exit 1
           fi
 
-          echo "Rust library: $LIB"
+          # Git's Makefile expects target/release/libgitcore.a.
+          mkdir -p "$RUST_TARGET_DIR/$BUILD_TYPE"
+          cp "$RUST_LIB" "$GIT_LIB"
 
-          # Git's Makefile expects:
-          #   $SOURCE_DIR/target/release/libgitcore.a
-          mkdir -p "$SOURCE_DIR/target/$BUILD_TYPE"
-          cp "$LIB" "$SOURCE_DIR/target/$BUILD_TYPE/$LIBNAME"
+          # Meson's custom target expects libgitcore.a in its build directory.
+          cp "$RUST_LIB" "$BUILD_DIR/libgitcore.a"
 
-          # Meson's custom_target expects:
-          #   $BUILD_DIR/libgitcore.a
-          cp "$LIB" "$BUILD_DIR/libgitcore.a"
+          echo "Git Rust library:"
+          ls -lh "$GIT_LIB"
 
-          echo "Final Rust archives:"
-          ls -lh \
-              "$SOURCE_DIR/target/$BUILD_TYPE/$LIBNAME" \
-              "$BUILD_DIR/libgitcore.a"
+          echo "Meson Rust library:"
+          ls -lh "$BUILD_DIR/libgitcore.a"
           '''
 
           p.write_text(s)
           PY
 
+          chmod +x build/git-x86_64/src/cargo-meson.sh
+
+          echo "===== cargo-meson.sh ====="
           cat build/git-x86_64/src/cargo-meson.sh
+
+          echo "===== Rust configuration ====="
+          rustc --version
+          rustc --print host
+          rustc --print target-libdir --target x86_64-apple-darwin
+
+          echo "===== Target ====="
+          echo "CARGO_BUILD_TARGET=${CARGO_BUILD_TARGET:-}"
+          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-}"
+          echo "RUSTFLAGS=${RUSTFLAGS:-}"
+
 
       - name: Build Release
         working-directory: git_osx_installer
