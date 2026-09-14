@@ -67,6 +67,10 @@ jobs:
               -ffunction-sections \\
               -fdata-sections \\
               -march=broadwell \\
+              -mtune=broadwell \\
+              -fomit-frame-pointer \\
+              -fno-unwind-tables \\
+              -fno-asynchronous-unwind-tables \\
               -pipe
 
           CXXFLAGS := $(ARCH_FLAGS) \\
@@ -75,12 +79,17 @@ jobs:
               -ffunction-sections \\
               -fdata-sections \\
               -march=broadwell \\
+              -mtune=broadwell \\
+              -fomit-frame-pointer \\
+              -fno-unwind-tables \\
+              -fno-asynchronous-unwind-tables \\
               -pipe
 
           LDFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
               -flto=thin \\
               -march=broadwell \\
+              -mtune=broadwell \\
               -Wl,-dead_strip \\
               -Wl,-dead_strip_dylibs""",
 
