@@ -170,26 +170,23 @@ jobs:
           from pathlib import Path
 
           p = Path("build/git-x86_64/src/cargo-meson.sh")
-          lines = p.read_text().splitlines()
+          s = p.read_text()
 
-          start = next(
-              i for i, line in enumerate(lines)
-              if line.startswith("cargo build --lib")
-          )
+          marker = "cargo build --lib"
 
-          end = next(
-              i for i in range(start, len(lines))
-              if lines[i].startswith("        cp \"$BUILD_DIR/libgitcore.a\"")
-          )
+          if marker not in s:
+              raise SystemExit("cargo build section not found")
 
-          replacement = """TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \\(.*\\)$/\\1/p')}"
+          s = s[:s.index(marker)]
 
-          cargo build \\
-              --lib \\
-              --quiet \\
-              --manifest-path="$SOURCE_DIR/Cargo.toml" \\
-              --target-dir="$BUILD_DIR" \\
-              --target="$TARGET" \\
+          s += r'''TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')}"
+
+          cargo build \
+              --lib \
+              --quiet \
+              --manifest-path="$SOURCE_DIR/Cargo.toml" \
+              --target-dir="$BUILD_DIR" \
+              --target="$TARGET" \
               "$@"
 
           RET=$?
@@ -203,14 +200,13 @@ jobs:
           if ! cmp "$LIB" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
           then
               cp "$LIB" "$BUILD_DIR/libgitcore.a"
-          fi"""
+          fi
+          '''
 
-          lines[start:end + 1] = replacement.splitlines()
-
-          p.write_text("\n".join(lines) + "\n")
+          p.write_text(s)
           PY
 
-          sed -n '1,120p' build/git-x86_64/src/cargo-meson.sh
+          cat build/git-x86_64/src/cargo-meson.sh
 
       - name: Build Release
         working-directory: git_osx_installer
