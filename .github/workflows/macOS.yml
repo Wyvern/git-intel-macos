@@ -170,21 +170,19 @@ jobs:
           from pathlib import Path
 
           p = Path("build/git-x86_64/src/cargo-meson.sh")
-          s = p.read_text()
+          lines = p.read_text().splitlines()
 
-          old = '''cargo build --lib --quiet --manifest-path="$SOURCE_DIR/Cargo.toml" --target-dir="$BUILD_DIR" "$@"
-          RET=$?
-          if test $RET -ne 0
-          then
-              exit $RET
-          fi
+          start = next(
+              i for i, line in enumerate(lines)
+              if line.startswith("cargo build --lib")
+          )
 
-          if ! cmp "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
-          then
-              cp "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a"
-          fi'''
+          end = next(
+              i for i in range(start, len(lines))
+              if lines[i].startswith("        cp \"$BUILD_DIR/libgitcore.a\"")
+          )
 
-          new = '''TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \\(.*\\)$/\\1/p')}"
+          replacement = """TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \\(.*\\)$/\\1/p')}"
 
           cargo build \\
               --lib \\
@@ -205,13 +203,14 @@ jobs:
           if ! cmp "$LIB" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
           then
               cp "$LIB" "$BUILD_DIR/libgitcore.a"
-          fi'''
+          fi"""
 
-          if old not in s:
-              raise SystemExit("expected cargo-meson.sh block not found")
+          lines[start:end + 1] = replacement.splitlines()
 
-          p.write_text(s.replace(old, new))
+          p.write_text("\n".join(lines) + "\n")
           PY
+
+          sed -n '1,120p' build/git-x86_64/src/cargo-meson.sh
 
       - name: Build Release
         working-directory: git_osx_installer
