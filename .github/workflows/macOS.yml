@@ -8,6 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: "on"
+  RUSTC_WRAPPER: "sccache"
 
 jobs:
   macOS:
@@ -28,6 +30,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          cache-workspace-crates: "true"
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@main
+
       - name: Checkout git_osx_installer
         uses: actions/checkout@v4
         with:
@@ -45,6 +56,23 @@ jobs:
           clang --version
           make --version
           xcode-select -p
+
+          mkdir -p "sccache-bin"
+
+          cat > "sccache-bin/clang" <<'EOF'
+          #!/bin/bash
+          exec sccache /usr/bin/clang "$@"
+          EOF
+
+          cat > "sccache-bin/clang++" <<'EOF'
+          #!/bin/bash
+          exec sccache /usr/bin/clang++ "$@"
+          EOF
+
+          chmod +x "sccache-bin/clang" "sccache-bin/clang++"
+
+          echo "$PWD/sccache-bin" >> "$GITHUB_PATH"
+          # export PATH="$PWD/sccache-bin:$PATH"
 
       - name: Patch for Intel x86_64
         working-directory: git_osx_installer
