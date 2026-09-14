@@ -184,6 +184,7 @@ jobs:
           echo "Cargo target: $TARGET"
           echo "Build type: $BUILD_TYPE"
           echo "Build directory: $BUILD_DIR"
+          echo "Source directory: $SOURCE_DIR"
 
           cargo build \
               --lib \
@@ -199,46 +200,32 @@ jobs:
               exit $RET
           fi
 
-          echo "Searching for Rust archive..."
-
-          find "$BUILD_DIR" \
-              -type f \
-              -name "$LIBNAME" \
-              -print
-
           LIB="$BUILD_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
 
           if test ! -f "$LIB"
           then
-              LIB="$(find "$BUILD_DIR" \
-                  -type f \
-                  -path "*/$BUILD_TYPE/$LIBNAME" \
-                  -print -quit)"
-          fi
+              echo "error: Rust library not found: $LIB" >&2
 
-          if test -z "$LIB" || test ! -f "$LIB"
-          then
-              echo "error: Rust library not found" >&2
-              echo "BUILD_DIR=$BUILD_DIR" >&2
-              echo "TARGET=$TARGET" >&2
-              echo "BUILD_TYPE=$BUILD_TYPE" >&2
+              echo "Rust build tree:" >&2
+              find "$BUILD_DIR" -type f -name "$LIBNAME" -print >&2
+
               exit 1
           fi
 
           echo "Rust library: $LIB"
 
           # Git's Makefile expects:
-          #   target/release/libgitcore.a
-          mkdir -p "$BUILD_DIR/$BUILD_TYPE"
-          cp "$LIB" "$BUILD_DIR/$BUILD_TYPE/$LIBNAME"
+          #   $SOURCE_DIR/target/release/libgitcore.a
+          mkdir -p "$SOURCE_DIR/target/$BUILD_TYPE"
+          cp "$LIB" "$SOURCE_DIR/target/$BUILD_TYPE/$LIBNAME"
 
-          # Meson expects:
-          #   build/.../libgitcore.a
+          # Meson's custom_target expects:
+          #   $BUILD_DIR/libgitcore.a
           cp "$LIB" "$BUILD_DIR/libgitcore.a"
 
           echo "Final Rust archives:"
           ls -lh \
-              "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" \
+              "$SOURCE_DIR/target/$BUILD_TYPE/$LIBNAME" \
               "$BUILD_DIR/libgitcore.a"
           '''
 
