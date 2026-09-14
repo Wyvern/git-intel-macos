@@ -278,19 +278,31 @@ jobs:
         working-directory: git_osx_installer
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           set -euxo pipefail
 
           pkg="${{ steps.package.outputs.file }}"
 
+          VERSION=$(basename "$pkg" | sed -E 's/^git-([0-9][0-9.]*)\.pkg$/\1/')
+          RELEASE_TAG="v${VERSION}"
+
           echo
+          echo "Git version: $VERSION"
           echo "Release tag: $RELEASE_TAG"
           echo "Package:     $pkg"
           echo
 
-          gh release upload \
-            "$RELEASE_TAG" \
-            "$pkg" \
-            --repo "${{ github.repository }}" \
-            --clobber
+          if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload \
+              "$RELEASE_TAG" \
+              "$pkg" \
+              --repo "${{ github.repository }}" \
+              --clobber
+          else
+            gh release create \
+              "$RELEASE_TAG" \
+              "$pkg" \
+              --repo "${{ github.repository }}" \
+              --title "Git ${VERSION}" \
+              --generate-notes
+          fi
