@@ -158,18 +158,29 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
           echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
 
-      - name: Download Git source
+      - name: Extract Git source
         working-directory: git_osx_installer
         run: |
           set -euxo pipefail
 
-          make download
+          VERSION="$(bin/latest-git-version)"
 
-          find build -maxdepth 3 -type f -name Cargo.toml -print
+          make "build/git-${VERSION}/Makefile"
+
+          echo
+          echo "===== Cargo files ====="
+
+          find "build/git-${VERSION}" \
+            -type f \
+            -name Cargo.toml \
+            -print
+
+          echo
+          echo "===== Rust build references ====="
 
           grep -RIn \
             -E 'cargo[[:space:]]+(build|rustc)|libgitcore|target/release' \
-            build/git-* \
+            "build/git-${VERSION}" \
             2>/dev/null || true
 
       - name: Build Release
