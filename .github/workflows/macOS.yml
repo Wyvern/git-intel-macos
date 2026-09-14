@@ -165,32 +165,24 @@ jobs:
 
           VERSION="$(bin/latest-git-version)"
 
-          mkdir -p build
+          make download
 
-          tar xzf "build/git-${VERSION}.tar.gz" -C build
+          make "build/git-x86_64/Makefile"
 
           echo
           echo "===== Cargo.toml ====="
 
-          find "build/git-${VERSION}" \
+          find "build/git-x86_64" \
             -type f \
             -name Cargo.toml \
             -print
 
           echo
-          echo "===== Rust ====="
-
-          find "build/git-${VERSION}" \
-            -type f \
-            \( -name '*.rs' -o -name 'Cargo.toml' \) \
-            -print | head -200
-
-          echo
-          echo "===== Cargo references ====="
+          echo "===== Rust build references ====="
 
           grep -RIn \
             -E 'cargo|libgitcore|rustc|RUSTFLAGS|CARGO_BUILD_TARGET|target/release' \
-            "build/git-${VERSION}" \
+            "build/git-x86_64" \
             2>/dev/null | head -300 || true
 
       - name: Build Release
