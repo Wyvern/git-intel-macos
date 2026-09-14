@@ -175,22 +175,12 @@ jobs:
           echo "===== Rust Intel target ====="
           rustc --print target-libdir --target x86_64-apple-darwin
 
-          echo "===== Cargo ====="
-          cargo -vV
-
-          echo "===== Git Rust variables ====="
+          echo "===== Git 2.55 Rust configuration ====="
           grep -nE '^(RUST|NO_RUST|CARGO)' Makefile || true
-
-          echo "===== Git Rust references ====="
           grep -nE 'libgitcore|RUST_LIB|CARGO' Makefile || true
 
-          echo "===== Git Rust rules ====="
-          grep -n -A20 -B5 'libgitcore' Makefile || true
-
-          echo "===== cargo-meson.sh ====="
-          if [ -f src/cargo-meson.sh ]; then
-            cat src/cargo-meson.sh
-          fi
+          echo "===== Cargo ====="
+          cargo -vV
 
           echo "===== Direct Intel Rust build ====="
           cargo build \
@@ -199,24 +189,19 @@ jobs:
             --target x86_64-apple-darwin
 
           echo "===== Rust output ====="
-          ls -lh \
-            target/x86_64-apple-darwin/release/libgitcore.a
+          ls -lh target/x86_64-apple-darwin/release/libgitcore.a
 
           echo "===== Rust archive architecture ====="
-          file \
-            target/x86_64-apple-darwin/release/libgitcore.a
+          file target/x86_64-apple-darwin/release/libgitcore.a
 
       - name: Build installer
         working-directory: git_osx_installer
         run: |
           set -euxo pipefail
 
-          cd build/git-x86_64
+          grep -n -A20 -B10 'RUST_LIB' build/git-x86_64/Makefile
 
-          make clean || true
-
-          make package \
-            RUST_TARGETS=x86_64-apple-darwin
+          make package
 
           echo
           echo "===== Built packages ====="
