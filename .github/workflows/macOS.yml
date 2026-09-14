@@ -166,113 +166,42 @@ jobs:
           make download
           make build/git-x86_64/Makefile
 
-          cat > build/git-x86_64/src/cargo-meson.sh <<'EOF'
-          #!/bin/sh
+          python3 - <<'PY'
+          from pathlib import Path
 
-          if test "$#" -lt 2
-          then
-              exit 1
-          fi
+          p = Path("build/git-x86_64/Makefile")
+          s = p.read_text()
 
-          SOURCE_DIR="$1"
-          BUILD_DIR="$2"
-          BUILD_TYPE=debug
+          old = """RUST_LIB = target/$(RUST_BUILD_CONFIG)/$(RUST_LIB_NAME)"""
 
-          shift 2
+          new = """RUST_LIB = target/$(RUST_BUILD_CONFIG)/$(RUST_LIB_NAME)
 
-          for arg
-          do
-              case "$arg" in
-              --release)
-                  BUILD_TYPE=release
-                  ;;
-              esac
-          done
+          RUST_CARGO_LIB = target/$(RUST_BUILD_CONFIG)/x86_64-apple-darwin/$(RUST_LIB_NAME)"""
 
-          case "$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')" in
-              *-windows-msvc)
-                  LIBNAME=gitcore.lib
-                  PATH="$(echo "$PATH" | tr ':' '\n' | grep -Ev "^(/mingw64/bin|/usr/bin)$" | paste -sd: -):/mingw64/bin:/usr/bin"
-                  export PATH
-                  ;;
-              *-windows-*)
-                  LIBNAME=gitcore.lib
-                  ;;
-              *)
-                  LIBNAME=libgitcore.a
-                  ;;
-          esac
+          if old not in s:
+              raise SystemExit("RUST_LIB definition not found")
 
-          TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')}"
+          s = s.replace(old, new, 1)
 
-          echo "SOURCE_DIR=$SOURCE_DIR"
-          echo "BUILD_DIR=$BUILD_DIR"
-          echo "BUILD_TYPE=$BUILD_TYPE"
-          echo "TARGET=$TARGET"
-          echo "LIBNAME=$LIBNAME"
+          old = """$(RUST_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
+          $(QUIET_CARGO)cargo build $(CARGO_ARGS)"""
 
-          RUST_TARGET_DIR="$SOURCE_DIR/target"
+          new = """$(RUST_LIB): $(RUST_CARGO_LIB)
+          $(QUIET)mkdir -p $(dir $@)
+          $(QUIET)cp $< $@
 
-          cargo build \
-              --lib \
-              --quiet \
-              --manifest-path="$SOURCE_DIR/Cargo.toml" \
-              --target-dir="$RUST_TARGET_DIR" \
-              --target="$TARGET" \
-              "$@"
+          $(RUST_CARGO_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
+          $(QUIET_CARGO)cargo build $(CARGO_ARGS) --target x86_64-apple-darwin"""
 
-          RET=$?
+          if old not in s:
+              raise SystemExit("Rust Make rule not found")
 
-          if test $RET -ne 0
-          then
-              exit $RET
-          fi
+          s = s.replace(old, new, 1)
 
-          RUST_LIB="$RUST_TARGET_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
-          GIT_LIB="$RUST_TARGET_DIR/$BUILD_TYPE/$LIBNAME"
-          MESON_LIB="$BUILD_DIR/$LIBNAME"
+          p.write_text(s)
+          PY
 
-          echo "Rust output: $RUST_LIB"
-
-          if test ! -f "$RUST_LIB"
-          then
-              echo "error: Rust library not found: $RUST_LIB" >&2
-              echo "Available Rust libraries:" >&2
-              find "$RUST_TARGET_DIR" -type f -name "$LIBNAME" -print >&2 || true
-              exit 1
-          fi
-
-          # Git's Makefile links:
-          #   target/release/libgitcore.a
-          mkdir -p "$RUST_TARGET_DIR/$BUILD_TYPE"
-          cp "$RUST_LIB" "$GIT_LIB"
-
-          # Meson's custom target expects:
-          #   <meson-build-dir>/libgitcore.a
-          cp "$RUST_LIB" "$MESON_LIB"
-
-          echo "Git Rust library:"
-          ls -lh "$GIT_LIB"
-
-          echo "Meson Rust library:"
-          ls -lh "$MESON_LIB"
-          EOF
-
-          chmod +x build/git-x86_64/src/cargo-meson.sh
-
-          echo "===== cargo-meson.sh ====="
-          cat build/git-x86_64/src/cargo-meson.sh
-
-          echo "===== Rust configuration ====="
-          rustc --version
-          rustc -vV
-          rustc --print host-tuple
-          rustc --print target-libdir --target x86_64-apple-darwin
-
-          echo "===== Environment ====="
-          echo "CARGO_BUILD_TARGET=${CARGO_BUILD_TARGET:-}"
-          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-}"
-          echo "RUSTFLAGS=${RUSTFLAGS:-}"
+          grep -n -A12 -B5 'RUST_CARGO_LIB' build/git-x86_64/Makefile
 
       - name: Build Release
         working-directory: git_osx_installer
