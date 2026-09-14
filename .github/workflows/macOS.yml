@@ -166,31 +166,52 @@ jobs:
           make download
           make build/git-x86_64/Makefile
 
-          python3 - <<'PY'
-          from pathlib import Path
+          cat > build/git-x86_64/src/cargo-meson.sh <<'EOF'
+          #!/bin/sh
 
-          p = Path("build/git-x86_64/src/cargo-meson.sh")
-          s = p.read_text()
+          if test "$#" -lt 2
+          then
+              exit 1
+          fi
 
-          marker = "cargo build --lib"
+          SOURCE_DIR="$1"
+          BUILD_DIR="$2"
+          BUILD_TYPE=debug
 
-          if marker not in s:
-              raise SystemExit("cargo build section not found")
+          shift 2
 
-          s = s[:s.index(marker)]
+          for arg
+          do
+              case "$arg" in
+              --release)
+                  BUILD_TYPE=release
+                  ;;
+              esac
+          done
 
-          s += r'''TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')}"
+          case "$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')" in
+              *-windows-msvc)
+                  LIBNAME=gitcore.lib
+                  PATH="$(echo "$PATH" | tr ':' '\n' | grep -Ev "^(/mingw64/bin|/usr/bin)$" | paste -sd: -):/mingw64/bin:/usr/bin"
+                  export PATH
+                  ;;
+              *-windows-*)
+                  LIBNAME=gitcore.lib
+                  ;;
+              *)
+                  LIBNAME=libgitcore.a
+                  ;;
+          esac
 
-          echo "Cargo target: $TARGET"
-          echo "Source directory: $SOURCE_DIR"
-          echo "Meson build directory: $BUILD_DIR"
-          echo "Build type: $BUILD_TYPE"
+          TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')}"
 
-          # Build Rust for Intel, but keep Cargo's target directory
-          # inside the Git source tree.
+          echo "SOURCE_DIR=$SOURCE_DIR"
+          echo "BUILD_DIR=$BUILD_DIR"
+          echo "BUILD_TYPE=$BUILD_TYPE"
+          echo "TARGET=$TARGET"
+          echo "LIBNAME=$LIBNAME"
+
           RUST_TARGET_DIR="$SOURCE_DIR/target"
-
-          rm -f "$RUST_TARGET_DIR/$BUILD_TYPE/$LIBNAME"
 
           cargo build \
               --lib \
@@ -201,6 +222,7 @@ jobs:
               "$@"
 
           RET=$?
+
           if test $RET -ne 0
           then
               exit $RET
@@ -208,33 +230,33 @@ jobs:
 
           RUST_LIB="$RUST_TARGET_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
           GIT_LIB="$RUST_TARGET_DIR/$BUILD_TYPE/$LIBNAME"
+          MESON_LIB="$BUILD_DIR/$LIBNAME"
 
-          echo "Rust output:"
-          echo "  $RUST_LIB"
+          echo "Rust output: $RUST_LIB"
 
           if test ! -f "$RUST_LIB"
           then
               echo "error: Rust library not found: $RUST_LIB" >&2
+              echo "Available Rust libraries:" >&2
               find "$RUST_TARGET_DIR" -type f -name "$LIBNAME" -print >&2 || true
               exit 1
           fi
 
-          # Git's Makefile expects target/release/libgitcore.a.
+          # Git's Makefile links:
+          #   target/release/libgitcore.a
           mkdir -p "$RUST_TARGET_DIR/$BUILD_TYPE"
           cp "$RUST_LIB" "$GIT_LIB"
 
-          # Meson's custom target expects libgitcore.a in its build directory.
-          cp "$RUST_LIB" "$BUILD_DIR/libgitcore.a"
+          # Meson's custom target expects:
+          #   <meson-build-dir>/libgitcore.a
+          cp "$RUST_LIB" "$MESON_LIB"
 
           echo "Git Rust library:"
           ls -lh "$GIT_LIB"
 
           echo "Meson Rust library:"
-          ls -lh "$BUILD_DIR/libgitcore.a"
-          '''
-
-          p.write_text(s)
-          PY
+          ls -lh "$MESON_LIB"
+          EOF
 
           chmod +x build/git-x86_64/src/cargo-meson.sh
 
@@ -243,14 +265,14 @@ jobs:
 
           echo "===== Rust configuration ====="
           rustc --version
-          rustc --print host
+          rustc -vV
+          rustc --print host-tuple
           rustc --print target-libdir --target x86_64-apple-darwin
 
-          echo "===== Target ====="
+          echo "===== Environment ====="
           echo "CARGO_BUILD_TARGET=${CARGO_BUILD_TARGET:-}"
           echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-}"
           echo "RUSTFLAGS=${RUSTFLAGS:-}"
-
 
       - name: Build Release
         working-directory: git_osx_installer
