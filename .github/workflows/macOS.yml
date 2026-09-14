@@ -161,10 +161,23 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
           echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
 
-          grep -RIn \
-                      --exclude-dir=.git \
-                      -E 'cargo[[:space:]]+(build|rustc)|libgitcore\.a' \
-                      . || true
+      - name: Patch Git Rust build for Intel
+        working-directory: git_osx_installer
+        run: |
+          set -euxo pipefail
+
+          echo "===== Makefile Rust references ====="
+
+          grep -nEi \
+            'rust|cargo|gitcore' \
+            Makefile || true
+
+          echo
+          echo "===== Makefile build rules ====="
+
+          grep -nEi \
+            'git-|compile|build|download|curl|tar|stage' \
+            Makefile | head -200 || true
 
       - name: Build Release
         working-directory: git_osx_installer
