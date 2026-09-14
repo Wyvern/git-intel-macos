@@ -158,46 +158,60 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
           echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
 
-      - name: Inspect Git Rust build
+      - name: Prepare Git source
         working-directory: git_osx_installer
         run: |
           set -euxo pipefail
-
-          VERSION="$(bin/latest-git-version)"
 
           make download
+          make build/git-x86_64/Makefile
 
-          make "build/git-x86_64/Makefile"
+          python3 - <<'PY'
+          from pathlib import Path
 
-          echo
-          echo "===== Cargo.toml ====="
+          p = Path("build/git-x86_64/src/cargo-meson.sh")
+          s = p.read_text()
 
-          find "build/git-x86_64" \
-            -type f \
-            -name Cargo.toml \
-            -print
+          old = '''cargo build --lib --quiet --manifest-path="$SOURCE_DIR/Cargo.toml" --target-dir="$BUILD_DIR" "$@"
+          RET=$?
+          if test $RET -ne 0
+          then
+              exit $RET
+          fi
 
-          echo
-          echo "===== Rust build references ====="
+          if ! cmp "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
+          then
+              cp "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a"
+          fi'''
 
-          grep -RIn \
-            -E 'cargo|libgitcore|rustc|RUSTFLAGS|CARGO_BUILD_TARGET|target/release' \
-            "build/git-x86_64" \
-            2>/dev/null | head -300 || true
+          new = '''TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \\(.*\\)$/\\1/p')}"
 
-      - name: Inspect Git Rust build
-        working-directory: git_osx_installer
-        run: |
-          set -euxo pipefail
+          cargo build \\
+              --lib \\
+              --quiet \\
+              --manifest-path="$SOURCE_DIR/Cargo.toml" \\
+              --target-dir="$BUILD_DIR" \\
+              --target="$TARGET" \\
+              "$@"
 
-          echo "===== cargo-meson.sh ====="
+          RET=$?
+          if test $RET -ne 0
+          then
+              exit $RET
+          fi
 
-          sed -n '1,120p' build/git-x86_64/src/cargo-meson.sh
+          LIB="$BUILD_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
 
-          echo
-          echo "===== meson.build ====="
+          if ! cmp "$LIB" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
+          then
+              cp "$LIB" "$BUILD_DIR/libgitcore.a"
+          fi'''
 
-          sed -n '1,100p' build/git-x86_64/src/meson.build
+          if old not in s:
+              raise SystemExit("expected cargo-meson.sh block not found")
+
+          p.write_text(s.replace(old, new))
+          PY
 
       - name: Build Release
         working-directory: git_osx_installer
