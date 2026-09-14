@@ -153,8 +153,9 @@ jobs:
       - name: Configure Rust for Intel
         run: |
           set -euxo pipefail
+
           rustup target add x86_64-apple-darwin
-          echo "CARGO_BUILD_TARGET=x86_64-apple-darwin" >> "$GITHUB_ENV"
+
           echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
           echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
 
@@ -166,58 +167,38 @@ jobs:
           make download
           make build/git-x86_64/Makefile
 
-          python3 - <<'PY'
-          from pathlib import Path
+          cd build/git-x86_64
 
-          p = Path("build/git-x86_64/Makefile")
-          s = p.read_text()
+          echo "===== Rust target ====="
+          rustc --print host-tuple
+          rustc --print target-libdir --target x86_64-apple-darwin
 
-          old = """RUST_LIB = target/$(RUST_BUILD_CONFIG)/$(RUST_LIB_NAME)"""
+          echo "===== Make Rust configuration ====="
+          grep -n -A35 -B5 'RUST_BUILD_CONFIG' Makefile
 
-          new = """RUST_LIB = target/$(RUST_BUILD_CONFIG)/$(RUST_LIB_NAME)
+          echo "===== Cargo configuration ====="
+          cargo -vV
 
-          RUST_CARGO_LIB = target/$(RUST_BUILD_CONFIG)/x86_64-apple-darwin/$(RUST_LIB_NAME)"""
+          echo "===== Testing Rust cross build ====="
+          cargo build \
+            --release \
+            --lib \
+            --target x86_64-apple-darwin
 
-          if old not in s:
-              raise SystemExit("RUST_LIB definition not found")
+          echo "===== Rust output ====="
+          ls -lh target/x86_64-apple-darwin/release/libgitcore.a
 
-          s = s.replace(old, new, 1)
-
-          old = """$(RUST_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
-          $(QUIET_CARGO)cargo build $(CARGO_ARGS)"""
-
-          new = """$(RUST_LIB): $(RUST_CARGO_LIB)
-          $(QUIET)mkdir -p $(dir $@)
-          $(QUIET)cp $< $@
-
-          $(RUST_CARGO_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
-          $(QUIET_CARGO)cargo build $(CARGO_ARGS) --target x86_64-apple-darwin"""
-
-          if old not in s:
-              raise SystemExit("Rust Make rule not found")
-
-          s = s.replace(old, new, 1)
-
-          p.write_text(s)
-          PY
-
-          grep -n -A12 -B5 'RUST_CARGO_LIB' build/git-x86_64/Makefile
-
-      - name: Build Release
+      - name: Build installer
         working-directory: git_osx_installer
-        env:
-          MACOSX_DEPLOYMENT_TARGET: '11.0'
         run: |
           set -euxo pipefail
 
+          cd build/git-x86_64
+
           make clean || true
 
-          rm -rf \
-            build \
-            stage-x86_64 \
-            git-*.pkg
-
-          make package
+          make package \
+            RUST_TARGETS=x86_64-apple-darwin
 
           echo
           echo "===== Built packages ====="
