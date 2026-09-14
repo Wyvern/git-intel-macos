@@ -181,6 +181,10 @@ jobs:
 
           s += r'''TARGET="${CARGO_BUILD_TARGET:-$(cargo -vV | sed -n 's/^host: \(.*\)$/\1/p')}"
 
+          echo "Cargo target: $TARGET"
+          echo "Build type: $BUILD_TYPE"
+          echo "Build directory: $BUILD_DIR"
+
           cargo build \
               --lib \
               --quiet \
@@ -195,19 +199,47 @@ jobs:
               exit $RET
           fi
 
+          echo "Searching for Rust archive..."
+
+          find "$BUILD_DIR" \
+              -type f \
+              -name "$LIBNAME" \
+              -print
+
           LIB="$BUILD_DIR/$TARGET/$BUILD_TYPE/$LIBNAME"
 
           if test ! -f "$LIB"
           then
-              echo "error: Rust library not found: $LIB" >&2
+              LIB="$(find "$BUILD_DIR" \
+                  -type f \
+                  -path "*/$BUILD_TYPE/$LIBNAME" \
+                  -print -quit)"
+          fi
+
+          if test -z "$LIB" || test ! -f "$LIB"
+          then
+              echo "error: Rust library not found" >&2
+              echo "BUILD_DIR=$BUILD_DIR" >&2
+              echo "TARGET=$TARGET" >&2
+              echo "BUILD_TYPE=$BUILD_TYPE" >&2
               exit 1
           fi
 
-          # Git's Makefile expects target/release/libgitcore.a.
+          echo "Rust library: $LIB"
+
+          # Git's Makefile expects:
+          #   target/release/libgitcore.a
+          mkdir -p "$BUILD_DIR/$BUILD_TYPE"
           cp "$LIB" "$BUILD_DIR/$BUILD_TYPE/$LIBNAME"
 
-          # Meson expects build/libgitcore.a.
+          # Meson expects:
+          #   build/.../libgitcore.a
           cp "$LIB" "$BUILD_DIR/libgitcore.a"
+
+          echo "Final Rust archives:"
+          ls -lh \
+              "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" \
+              "$BUILD_DIR/libgitcore.a"
           '''
 
           p.write_text(s)
