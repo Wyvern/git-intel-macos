@@ -185,6 +185,20 @@ jobs:
             "build/git-x86_64" \
             2>/dev/null | head -300 || true
 
+      - name: Inspect Git Rust build
+        working-directory: git_osx_installer
+        run: |
+          set -euxo pipefail
+
+          echo "===== cargo-meson.sh ====="
+
+          sed -n '1,120p' build/git-x86_64/src/cargo-meson.sh
+
+          echo
+          echo "===== meson.build ====="
+
+          sed -n '1,100p' build/git-x86_64/src/meson.build
+
       - name: Build Release
         working-directory: git_osx_installer
         env:
