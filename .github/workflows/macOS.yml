@@ -66,7 +66,7 @@ jobs:
               -flto=thin \\
               -ffunction-sections \\
               -fdata-sections \\
-              -march=haswell \\
+              -march=broadwell \\
               -pipe
 
           CXXFLAGS := $(ARCH_FLAGS) \\
@@ -74,13 +74,13 @@ jobs:
               -flto=thin \\
               -ffunction-sections \\
               -fdata-sections \\
-              -march=haswell \\
+              -march=broadwell \\
               -pipe
 
           LDFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
               -flto=thin \\
-              -march=haswell \\
+              -march=broadwell \\
               -Wl,-dead_strip \\
               -Wl,-dead_strip_dylibs""",
 
@@ -155,7 +155,7 @@ jobs:
           rustup target add x86_64-apple-darwin
 
           echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
-          echo "RUSTFLAGS=-C target-cpu=haswell" >> "$GITHUB_ENV"
+          echo "RUSTFLAGS=-C target-cpu=broadwell" >> "$GITHUB_ENV"
 
       - name: Prepare Git source
         working-directory: git_osx_installer
