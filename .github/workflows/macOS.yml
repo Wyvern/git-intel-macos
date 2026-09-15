@@ -85,12 +85,13 @@ jobs:
           CFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
               -flto=thin \\
-              -ffunction-sections \\
-              -fdata-sections \\
+              -fno-exceptions \\
+              -fno-rtti \\
               -march=broadwell \\
               -mtune=broadwell \\
               -fomit-frame-pointer \\
               -fno-unwind-tables \\
+              -fvisibility=hidden \\
               -fno-asynchronous-unwind-tables \\
               -g0 \\
               -pipe
@@ -98,12 +99,13 @@ jobs:
           CXXFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
               -flto=thin \\
-              -ffunction-sections \\
-              -fdata-sections \\
+              -fno-exceptions \\
+              -fno-rtti \\
               -march=broadwell \\
               -mtune=broadwell \\
               -fomit-frame-pointer \\
               -fno-unwind-tables \\
+              -fvisibility=hidden \\
               -fno-asynchronous-unwind-tables \\
               -g0 \\
               -pipe
@@ -113,6 +115,7 @@ jobs:
               -Wl,-S,-x \\
               -Wl,-no_uuid \\
               -Wl,-dead_strip \\
+              -Wl,-no_exported_symbols \\
               -Wl,-dead_strip_dylibs""",
 
               "DESTDIR_arm := $(PWD)/stage-arm/":
