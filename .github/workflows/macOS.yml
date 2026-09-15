@@ -110,9 +110,9 @@ jobs:
 
           LDFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
-              -Wl,-dead_strip \\
               -Wl,-s \\
               -Wl,-no_uuid \\
+              -Wl,-dead_strip \\
               -Wl,-dead_strip_dylibs""",
 
               "DESTDIR_arm := $(PWD)/stage-arm/":
