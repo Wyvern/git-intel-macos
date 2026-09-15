@@ -111,7 +111,7 @@ jobs:
               -pipe
 
           LDFLAGS := $(ARCH_FLAGS) \\
-              -O3 \\
+              -Wl,-O3 \\
               -Wl,-S,-x \\
               -Wl,-no_uuid \\
               -Wl,-dead_strip \\
