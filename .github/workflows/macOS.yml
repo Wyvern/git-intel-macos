@@ -110,7 +110,7 @@ jobs:
 
           LDFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
-              -Wl,-s \\
+              -Wl,-S,-x \\
               -Wl,-no_uuid \\
               -Wl,-dead_strip \\
               -Wl,-dead_strip_dylibs""",
