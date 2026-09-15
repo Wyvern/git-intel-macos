@@ -92,6 +92,7 @@ jobs:
               -fomit-frame-pointer \\
               -fno-unwind-tables \\
               -fvisibility=hidden \\
+              -fno-semantic-interposition \\
               -fno-asynchronous-unwind-tables \\
               -g0 \\
               -pipe
@@ -106,6 +107,7 @@ jobs:
               -fomit-frame-pointer \\
               -fno-unwind-tables \\
               -fvisibility=hidden \\
+              -fno-semantic-interposition \\
               -fno-asynchronous-unwind-tables \\
               -g0 \\
               -pipe
