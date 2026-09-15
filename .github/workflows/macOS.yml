@@ -92,6 +92,7 @@ jobs:
               -fomit-frame-pointer \\
               -fno-unwind-tables \\
               -fno-asynchronous-unwind-tables \\
+              -g0 \\
               -pipe
 
           CXXFLAGS := $(ARCH_FLAGS) \\
@@ -104,14 +105,14 @@ jobs:
               -fomit-frame-pointer \\
               -fno-unwind-tables \\
               -fno-asynchronous-unwind-tables \\
+              -g0 \\
               -pipe
 
           LDFLAGS := $(ARCH_FLAGS) \\
               -O3 \\
-              -flto=thin \\
-              -march=broadwell \\
-              -mtune=broadwell \\
               -Wl,-dead_strip \\
+              -Wl,-s \\
+              -Wl,-no_uuid \\
               -Wl,-dead_strip_dylibs""",
 
               "DESTDIR_arm := $(PWD)/stage-arm/":
