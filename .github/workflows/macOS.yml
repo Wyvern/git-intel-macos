@@ -242,6 +242,55 @@ jobs:
 
           s = s.replace(old, new, 1)
 
+          # ------------------------------------------------------------
+          # Completely disable all Git test builds.
+          #
+          # Git does not provide NO_TESTS itself. Add our own switch
+          # around the normal test dependencies and objects.
+          # ------------------------------------------------------------
+
+          replacements = {
+              # Unit-test generated headers.
+              """GENERATED_H += $(UNIT_TEST_DIR)/clar-decls.h
+          GENERATED_H += $(UNIT_TEST_DIR)/clar.suite""":
+              """ifndef NO_TESTS
+          GENERATED_H += $(UNIT_TEST_DIR)/clar-decls.h
+          GENERATED_H += $(UNIT_TEST_DIR)/clar.suite
+          endif""",
+
+              # Clar third-party sources.
+              """THIRD_PARTY_SOURCES += $(UNIT_TEST_DIR)/clar/%
+          THIRD_PARTY_SOURCES += $(UNIT_TEST_DIR)/clar/clar/%""":
+              """ifndef NO_TESTS
+          THIRD_PARTY_SOURCES += $(UNIT_TEST_DIR)/clar/%
+          THIRD_PARTY_SOURCES += $(UNIT_TEST_DIR)/clar/clar/%
+          endif""",
+
+              # Unit-test objects.
+              """OBJECTS += $(UNIT_TEST_OBJS)
+          OBJECTS += $(patsubst %,$(UNIT_TEST_DIR)/%.o,$(UNIT_TEST_PROGRAMS))""":
+              """ifndef NO_TESTS
+          OBJECTS += $(UNIT_TEST_OBJS)
+          OBJECTS += $(patsubst %,$(UNIT_TEST_DIR)/%.o,$(UNIT_TEST_PROGRAMS))
+          endif""",
+
+              # All normal test programs.
+              """all:: $(TEST_PROGRAMS) $(test_bindir_programs) $(UNIT_TEST_PROGS) $(CLAR_TEST_PROG)""":
+              """all::
+          ifndef NO_TESTS
+          all:: $(TEST_PROGRAMS) $(test_bindir_programs)
+          all:: $(UNIT_TEST_PROGS) $(CLAR_TEST_PROG)
+          endif""",
+          }
+
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(
+                      f"ERROR: test Makefile pattern not found:\n{old}"
+                  )
+
+              s = s.replace(old, new, 1)
+
           p.write_text(s)
           PY
 
@@ -252,9 +301,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          export NO_UNIT_TESTS=YesPlease
-          grep -nE 'NO_(UNIT_)?TESTS|unit-tests|UNIT_TEST' build/git-x86_64/Makefile
-
+          export NO_TESTS=YesPlease
           make package
 
           echo
