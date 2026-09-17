@@ -252,7 +252,9 @@ jobs:
         run: |
           set -euxo pipefail
 
-          export NO_TESTS=YesPlease
+          export NO_UNIT_TESTS=YesPlease
+          grep -nE 'NO_(UNIT_)?TESTS|unit-tests|UNIT_TEST' build/git-x86_64/Makefile
+
           make package
 
           echo
