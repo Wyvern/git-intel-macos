@@ -119,17 +119,31 @@ inherits = "dev"
 
 # release
 [profile.release]
-rustflags = ["-Cprefer-dynamic", "-Zhint-mostly-unused"]
+rustflags = [
+  "-Zhint-mostly-unused",
+  "-Zforce-unstable-if-unmarked",
+  "-Zlocation-detail=none",
+  "-Ztrap-unreachable=no",
+]
 rpath = true
 strip = true
+codegen-units = 1
+lto = true
 trim-paths = "all"
+panic = "immediate-abort"
 
 [profile.release.package."*"]
-rustflags = ["-Cprefer-dynamic"]
+rustflags = [
+  "-Zlocation-detail=none",
+  "-Ztrap-unreachable=no",
+]
 inherits = "release"
 
 [profile.release.build-override]
-rustflags = ["-Cprefer-dynamic"]
+rustflags = [
+  "-Zlocation-detail=none",
+  "-Ztrap-unreachable=no",
+]
 inherits = "release"
 
 # lto
@@ -312,7 +326,7 @@ rustflags = [
   "-Cdebuginfo=0",
   "-Cstrip=symbols",
   "-Ccollapse-macro-debuginfo=y",
-  # "-Cpanic=immediate-abort",
+  "-Cpanic=immediate-abort",
 
   "-Zunstable-options",
   "-Zembed-metadata=no",
