@@ -30,6 +30,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Rust Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          cache-workspace-crates: "true"
+
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@main
 
@@ -40,16 +51,9 @@ jobs:
           path: git_osx_installer
           fetch-depth: 1
 
-      - name: Show build environment
-        working-directory: git_osx_installer
+      - name: Set Rust global config
         run: |
-          set -euxo pipefail
-
-          uname -a
-          uname -m
-          clang --version
-          make --version
-          xcode-select -p
+          cp ./cargo/config.toml ~/.cargo/config.toml
 
       - name: C/C++ sccache wrappers
         run: |
