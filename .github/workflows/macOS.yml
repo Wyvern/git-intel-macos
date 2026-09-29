@@ -196,9 +196,6 @@ jobs:
 
           cd build/git-x86_64
 
-          grep -n -B10 -A30 python3 Makefile
-          exit
-
           python3 <<'PY'
           from pathlib import Path
 
