@@ -199,71 +199,67 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
 
-          p = Path("Makefile")
-          s = p.read_text()
+          path = Path("Makefile")
+          text = path.read_text()
 
-          old = """ifeq ($(uname_S),Windows)
-          RUST_LIB = $(RUST_TARGET_DIR)/gitcore.lib
-          else
-          RUST_LIB = $(RUST_TARGET_DIR)/libgitcore.a
-          endif
-          """
+          # Git 2.56.0 natively supports Rust cross-compilation through
+          # RUST_TARGETS.  Do not replace the upstream RUST_LIB rules.
+          if "RUST_TARGETS" not in text:
+              raise SystemExit(
+                  "ERROR: Git Makefile does not contain RUST_TARGETS"
+              )
 
-          new = """ifeq ($(uname_S),Windows)
-          RUST_LIB = $(RUST_TARGET_DIR)/gitcore.lib
-          else
-          RUST_LIB = $(RUST_TARGET_DIR)/libgitcore.a
-          endif
+          # Force the Rust portion of Git to the Intel target.
+          #
+          # Git 2.56 handles:
+          #
+          #   cargo build ... --target x86_64-apple-darwin
+          #
+          # and then copies:
+          #
+          #   target/x86_64-apple-darwin/release/libgitcore.a
+          #
+          # into its normal RUST_LIB location.
+          anchor = "ifndef NO_RUST"
 
-          RUST_TARGET = x86_64-apple-darwin
-          RUST_BUILD = $(notdir $(RUST_TARGET_DIR))
-          RUST_CARGO_LIB = target/$(RUST_TARGET)/$(RUST_BUILD)/libgitcore.a
-          """
+          if anchor not in text:
+              raise SystemExit(
+                  "ERROR: NO_RUST anchor not found"
+              )
 
-          if old not in s:
-              raise SystemExit("ERROR: RUST_LIB definition not found")
+          if "RUST_TARGETS = x86_64-apple-darwin" not in text:
+              text = text.replace(
+                  anchor,
+                  "RUST_TARGETS = x86_64-apple-darwin\n\n" + anchor,
+                  1,
+              )
 
-          s = s.replace(old, new, 1)
-
-          old = """$(RUST_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
-          	$(QUIET_CARGO)cargo build $(CARGO_ARGS)
-          """
-
-          new = """$(RUST_CARGO_LIB): Cargo.toml $(RUST_SOURCES) $(LIB_FILE)
-          	$(QUIET_CARGO)cargo build $(CARGO_ARGS) --target $(RUST_TARGET)
-
-          $(RUST_LIB): $(RUST_CARGO_LIB)
-          	$(QUIET)mkdir -p $(dir $@)
-          	$(QUIET)cp $< $@
-          """
-
-          if old not in s:
-              raise SystemExit("ERROR: original RUST_LIB build rule not found")
-
-          s = s.replace(old, new, 1)
-
-          # Unit-test objects.
+          # Do not build Git's unit-test programs as part of the installer.
           old = "OBJECTS += $(UNIT_TEST_OBJS)"
-          if old not in s:
-              raise SystemExit("ERROR: UNIT_TEST_OBJS line not found")
-          s = s.replace(old, "", 1)
+          if old in text:
+              text = text.replace(old, "", 1)
 
-          # Unit-test program objects.
-          old = "OBJECTS += $(patsubst %,$(UNIT_TEST_DIR)/%.o,$(UNIT_TEST_PROGRAMS))"
-          if old not in s:
-              raise SystemExit("ERROR: UNIT_TEST_PROGRAMS object line not found")
-          s = s.replace(old, "", 1)
+          old = (
+              "OBJECTS += "
+              "$(patsubst %,$(UNIT_TEST_DIR)/%.o,$(UNIT_TEST_PROGRAMS))"
+          )
+          if old in text:
+              text = text.replace(old, "", 1)
 
           # Remove test programs from the default build.
-          old = "all:: $(TEST_PROGRAMS) $(test_bindir_programs) $(UNIT_TEST_PROGS) $(CLAR_TEST_PROG)"
-          if old not in s:
-              raise SystemExit("ERROR: test all target not found")
-          s = s.replace(old, "all::", 1)
+          old = (
+              "all:: $(TEST_PROGRAMS) "
+              "$(test_bindir_programs) "
+              "$(UNIT_TEST_PROGS) "
+              "$(CLAR_TEST_PROG)"
+          )
+          if old in text:
+              text = text.replace(old, "all::", 1)
 
-          p.write_text(s)
+          path.write_text(text)
           PY
 
-          grep -n -A20 -B5 'RUST_CARGO_LIB' Makefile
+          grep -n -A35 -B8 'RUST_TARGETS' Makefile
 
       - name: Build installer
         working-directory: git_osx_installer
