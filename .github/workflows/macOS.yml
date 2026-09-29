@@ -196,9 +196,7 @@ jobs:
 
           cd build/git-x86_64
 
-          grep -n -B10 -A30 'python3' build/git-x86_64/Makefile
-          grep -R -n -B10 -A30 'python3' .
-          grep -R -n -B10 -A30 'python3' Makefile .github scripts build 2>/dev/null
+          grep -n -B10 -A30 python3 Makefile
           exit
 
           python3 <<'PY'
