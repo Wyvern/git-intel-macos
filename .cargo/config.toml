@@ -38,7 +38,6 @@ vcs = "none"
 inherits = "dev"
 rustflags = [
   "-Cprefer-dynamic",
-  "-Zhint-mostly-unused",
   "-Zlocation-detail=none",
   "-Zno-analysis",
   "-Zno-codegen",
@@ -75,7 +74,7 @@ inherits = "no"
 
 # dev
 [profile.dev]
-rustflags = ["-Cprefer-dynamic", "-Cdebug-assertions", "-Zhint-mostly-unused"]
+rustflags = ["-Cprefer-dynamic", "-Cdebug-assertions"]
 rpath = true
 debug = false
 strip = true
@@ -93,7 +92,7 @@ inherits = "dev"
 
 # test
 [profile.test]
-rustflags = ["-Cprefer-dynamic", "-Cdebug-assertions", "-Zhint-mostly-unused"]
+rustflags = ["-Cprefer-dynamic", "-Cdebug-assertions"]
 inherits = "dev"
 
 [profile.test.package."*"]
@@ -106,7 +105,7 @@ inherits = "dev"
 
 # bench
 [profile.bench]
-rustflags = ["-Cprefer-dynamic", "-Cdebug-assertions", "-Zhint-mostly-unused"]
+rustflags = ["-Cprefer-dynamic", "-Cdebug-assertions"]
 inherits = "dev"
 
 [profile.bench.package."*"]
@@ -120,7 +119,6 @@ inherits = "dev"
 # release
 [profile.release]
 rustflags = [
-  "-Zhint-mostly-unused",
   "-Zforce-unstable-if-unmarked",
   "-Zlocation-detail=none",
   "-Ztrap-unreachable=no",
@@ -152,7 +150,6 @@ inherits = "release"
 rustflags = [
   "-Zlocation-detail=none",
   "-Ztrap-unreachable=no",
-  "-Zhint-mostly-unused",
   # "-Zvirtual-function-elimination",
 ]
 codegen-units = 1
@@ -180,7 +177,6 @@ rustflags = [
 inherits = "lto"
 panic = "immediate-abort"
 rustflags = [
-  "-Zhint-mostly-unused",
   "-Zforce-unstable-if-unmarked",
   "-Zlocation-detail=none",
   "-Ztrap-unreachable=no",
