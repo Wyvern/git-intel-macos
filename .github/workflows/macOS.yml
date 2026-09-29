@@ -191,13 +191,15 @@ jobs:
         run: |
           set -euxo pipefail
 
-          grep -R "RUST_LIB" -n --exclude-dir=.git .
-          exit
-
           make download
           make build/git-x86_64/Makefile
 
           cd build/git-x86_64
+
+          grep -n 'RUST_LIB' Makefile
+          make -pn | grep '^RUST_LIB'
+          env | grep '^RUST_LIB='
+          exit
 
           python3 <<'PY'
           from pathlib import Path
