@@ -196,9 +196,9 @@ jobs:
 
           cd build/git-x86_64
 
-          grep -n 'RUST_LIB' Makefile
-          make -pn | grep '^RUST_LIB'
-          env | grep '^RUST_LIB='
+          grep -n -B10 -A30 'python3' build/git-x86_64/Makefile
+          grep -R -n -B10 -A30 'python3' .
+          grep -R -n -B10 -A30 'python3' Makefile .github scripts build 2>/dev/null
           exit
 
           python3 <<'PY'
