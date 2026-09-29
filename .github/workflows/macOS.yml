@@ -191,6 +191,9 @@ jobs:
         run: |
           set -euxo pipefail
 
+          grep -R "RUST_LIB" -n --exclude-dir=.git .
+          exit
+
           make download
           make build/git-x86_64/Makefile
 
