@@ -86,33 +86,11 @@ jobs:
               "ARCH_FLAGS := -target arm64-apple-macos11":
                   """ARCH_FLAGS := -target x86_64-apple-macos11
 
-          CFLAGS := $(ARCH_FLAGS) \\
-              -O3 \\
-              -flto \\
-              -fno-exceptions \\
-              -march=broadwell \\
-              -mtune=broadwell \\
-              -fomit-frame-pointer \\
-              -fno-unwind-tables \\
-              -fvisibility=hidden \\
-              -fno-asynchronous-unwind-tables \\
-              -g0 \\
-              -pipe
+          FLAGS := -O3 -march=broadwell -mtune=broadwell -flto -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -fvisibility=hidden -pipe -g0
 
-          CXXFLAGS := $(ARCH_FLAGS) \\
-              -O3 \\
-              -flto \\
-              -fno-exceptions \\
-              -fno-rtti \\
-              -march=broadwell \\
-              -mtune=broadwell \\
-              -fomit-frame-pointer \\
-              -fno-unwind-tables \\
-              -fvisibility=hidden \\
-              -fvisibility-inlines-hidden \\
-              -fno-asynchronous-unwind-tables \\
-              -g0 \\
-              -pipe
+          CFLAGS := $(ARCH_FLAGS) $(FLAGS)
+
+          CXXFLAGS := $(CFLAGS) -fno-exceptions -fno-rtti -fvisibility-inlines-hidden
 
           LDFLAGS := $(ARCH_FLAGS) \\
               -Wl,-O3 \\
