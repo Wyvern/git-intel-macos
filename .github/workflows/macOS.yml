@@ -34,7 +34,6 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
         with:
           components: rust-src
-          targets: x86_64-apple-darwin
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -44,7 +43,8 @@ jobs:
 
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@main
-        version: 0.18.0
+        with:
+          version: "v0.18.0"
 
       - name: Checkout git_osx_installer
         uses: actions/checkout@v7

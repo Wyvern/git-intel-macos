@@ -76,25 +76,6 @@ new-symbol-mangling = true
 [lints]
 workspace = true
 
-[lints.rust]
-
-[lints.rustdoc]
-
-[lints.clippy]
-
-[lints.cargo]
-# build-std = [
-#     "core",
-#     "std",
-#     "alloc",
-#     "proc_macro",
-#     "panic_abort",
-#     "panic_unwind",
-#     "libc",
-#     "compiler_builtins",
-# ]
-# build-std-features = ["force_alloc_jemalloc","threads"]
-
 # dev
 [profile.dev]
 opt-level = "s"
@@ -777,7 +758,7 @@ rustdoc-depinfo = true
 rustdoc-mergeable-info = true
 script = true
 target-applies-to-host = true
-# build-std = ["std", "panic_abort"]
+build-std = ["std", "panic_abort"]
 # build-std-features = ["optimize_for_size"]
 unstable-options = true
 prerelease = true
