@@ -53,7 +53,7 @@ jobs:
 
       - name: Set Rust global config
         run: |
-          mv ./.cargo/config.toml ~/.cargo/config.toml
+          mv .cargo/config.toml ~/.cargo/config.toml
 
       - name: C/C++ sccache wrappers
         run: |
