@@ -44,6 +44,7 @@ jobs:
 
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@main
+        version: 0.18.0
 
       - name: Checkout git_osx_installer
         uses: actions/checkout@v7
